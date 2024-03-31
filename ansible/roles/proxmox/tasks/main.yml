@@ -1,0 +1,30 @@
+# based on this blogpost: https://mattedwards.org/2023/11/jellyfin-in-an-unprivileged-lxc-with-intel-quicksync/#fn:4
+
+
+- name: Check if lxc arrstack config exists
+  ansible.builtin.stat:
+    path: "/etc/pve/nodes/{{ ansible_hostname }}/lxc/{{ arrstack_lxc_id }}.conf"
+  register: lxc_arrstack_config
+
+
+- name: Add LXC arrstack config to mount shared folder inside container
+  ansible.builtin.lineinfile:
+    path: "/etc/pve/nodes/{{ ansible_hostname }}/lxc/{{ arrstack_lxc_id }}.conf"
+    line: '{{ item }}'
+    create: yes
+  loop:
+    - 'lxc.mount.entry: /mnt/nas_media mnt/media none bind,optional,create=dir,replicate=0'
+  when: lxc_arrstack_config
+
+- name: restart LXC arrstack
+  ansible.builtin.shell: |
+    pct stop {{ arrstack_lxc_id }}
+    pct start {{ arrstack_lxc_id }}
+  when: lxc_arrstack_config
+
+- name: Add subgid (104 is the
+  ansible.builtin.lineinfile:
+    path: "/etc/subgid"
+    line: 'root:104'
+    create: yes
+  when: lxc_arrstack_config

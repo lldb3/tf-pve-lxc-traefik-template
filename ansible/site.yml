@@ -1,0 +1,17 @@
+# site.yml
+---
+- hosts: all
+  vars:
+
+- hosts: proxmox
+  roles:
+    - role: proxmox
+      tags: proxmox
+
+
+- hosts: lxc_container
+  roles:
+    - role: shell
+      tags: shell
+    - role: docker
+      tags: docker

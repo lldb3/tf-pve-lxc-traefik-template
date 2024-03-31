@@ -1,0 +1,45 @@
+
+
+- name: install packages for docker
+  apt:
+    pkg:
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+
+- name: debug distrib name
+  debug: var=ansible_distribution_release
+
+- name: add gpg key
+  apt_key:
+    url: "https://download.docker.com/linux/debian/gpg"
+    state: present
+
+- name: add repo
+  apt_repository:
+    repo: "deb https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable"
+    state: present
+
+- name: install docker
+  apt:
+    update_cache: true
+    pkg:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose
+      - docker-compose-plugin
+      - docker-buildx-plugin
+      - docker-ce-rootless-extras
+
+
+
+- name: Add the user 'containers' with a bash shell,
+  ansible.builtin.user:
+    name: containers
+    shell: /bin/bash
+    groups: docker
+    uid: 1000
+    append: yes
+

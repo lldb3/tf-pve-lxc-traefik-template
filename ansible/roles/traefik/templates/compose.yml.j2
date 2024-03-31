@@ -1,0 +1,200 @@
+---
+# Arr application Docker Compose stack with configuration management using Buildarr.
+
+#################################### NETWORKS
+networks:
+  default:
+    driver: bridge
+  main_net:
+    name: main_net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.66.0/24
+  socket_proxy:
+    name: socket_proxy
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.129.0/24
+
+#################################### SECRETS
+secrets:
+  # htpasswd:
+  #   file: "./secrets/htpasswd"
+  cloudflare_api_token:
+    file: "./secrets/cloudflare_api_token"
+
+#################################### EXTENSION FIELDS
+# More Info on how to use this: https://github.com/htpcBeginner/docker-traefik/pull/228
+
+# Common environment values
+x-environment: &x-environment
+  TZ: $TZ
+  PUID: $PUID
+  PGID: $PGID
+
+
+# Keys common to some of the dependent services/apps
+x-common-keys-apps: &common-keys-apps
+  networks:
+    - main_net
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+
+
+
+###################################################### SERVICES
+services:
+  ###################################################### CORE
+  socket-proxy:
+    container_name: socket-proxy
+    image: tecnativa/docker-socket-proxy
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    networks:
+      socket_proxy:
+        ipv4_address: 192.168.129.254 # You can specify a static IP
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    env_file:
+      - .socketproxy.env
+
+
+  # Traefik 2 - Reverse Proxy
+  # Touch (create empty files) traefik.log and acme/acme.json. Set acme.json permissions to 600.
+  # mkdir -p $CONFIGDIR/traefik2/acme && touch $CONFIGDIR/traefik2/acme/acme.json && chmod 600 $CONFIGDIR/traefik2/acme/acme.json && touch $CONFIGDIR/traefik2/traefik.log
+  #
+  traefik:
+    container_name: "traefik"
+    depends_on:
+      - socket-proxy
+    security_opt:
+      - no-new-privileges:true
+    restart: always
+    image: "traefik:latest"
+    command:
+      - --global.checkNewVersion=true
+      - --global.sendAnonymousUsage=false
+      - --entryPoints.web.address=:80
+      - --entryPoints.websecure.address=:443
+      - --api=true
+      - --api.dashboard=false
+      - --log=true
+      - --log.level=WARN
+      - --accessLog=true
+      - --accessLog.filePath=/traefik.log
+      - --accessLog.bufferingSize=100000 # Configuring a buffer of X lines
+      - --accessLog.filters.statusCodes=400-499,500-599 # filter on not found and errors
+      ## Providers Docker / Socket Proxy
+      - --providers.docker=true
+      - --providers.docker.network=main_net
+      - --providers.docker.endpoint=tcp://socket-proxy:2375
+      - --providers.docker.exposedByDefault=false
+      - --providers.docker.swarmMode=false
+      - --providers.file.directory=/rules
+      - --providers.file.watch=true
+      ## TLS Options for security (A+)
+      - --entrypoints.websecure.http.tls.options=tls-opts@file
+      # Add dns-cloudflare as default for all services. Enables the use of TLS on all services
+      - --entrypoints.websecure.http.tls.certresolver=dns-cloudflare
+      - --entrypoints.websecure.http.tls.domains[0].main=$DOMAINNAME
+      - --entrypoints.websecure.http.tls.domains[0].sans=*.$DOMAINNAME
+      ## DNS Challenge settings
+{% if staging == true %}
+      - --certificatesResolvers.dns-cloudflare.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory # LetsEncrypt Staging Server - uncomment when testing
+{% endif %}
+      - --certificatesResolvers.dns-cloudflare.acme.dnsChallenge=true
+      - --certificatesResolvers.dns-cloudflare.acme.dnsChallenge.provider=cloudflare
+      - --certificatesResolvers.dns-cloudflare.acme.email=$CERT_POSTMASTER_MAIL
+      - --certificatesResolvers.dns-cloudflare.acme.storage=/acme/acme.json
+      - --certificatesResolvers.dns-cloudflare.acme.dnsChallenge.resolvers=1.1.1.1:53,1.0.0.1:53
+      - --certificatesResolvers.dns-cloudflare.acme.dnsChallenge.delayBeforeCheck=5
+    networks:
+      main_net:
+        ipv4_address: 192.168.66.254 # You can specify a static IP
+      socket_proxy:
+        ipv4_address: 192.168.129.253
+    #healthcheck:
+    #  test: ["CMD", "traefik", "healthcheck", "--ping"]
+    #  interval: 5s
+    #  retries: 3
+    ports:
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: host
+      - target: 443
+        published: 443
+        protocol: tcp
+        mode: host
+    volumes:
+      # - /var/run/docker.sock:/var/run/docker.sock:ro # Use Docker Socket Proxy instead for improved security
+      - $CONFIGDIR/traefik2/rules:/rules
+      - $CONFIGDIR/traefik2/acme:/acme
+      - $CONFIGDIR/traefik2/traefik.log:/traefik.log
+    environment:
+      - TZ=$TZ
+      - CLOUDFLARE_DNS_API_TOKEN_FILE=/run/secrets/cloudflare_api_token
+    secrets:
+      - cloudflare_api_token
+    labels:
+      - traefik.enable=true
+      # HTTP-to-HTTPS Redirect
+      - "traefik.http.routers.http-catchall.entrypoints=web,websecure"
+      - "traefik.http.routers.http-catchall.rule=HostRegexp(`{host:.+}`)"
+      - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+
+      ## DASHBOARD
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.$DOMAINNAME`)"
+      - "traefik.http.routers.traefik.middlewares=chain-no-auth@file"
+      - "traefik.http.routers.traefik.service=api@internal"
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    # command: --run-once # will run once and stop
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      socket_proxy:
+    environment:
+      - DOCKER_HOST=tcp://socket-proxy:2375
+      ## ignore updating containers only with `com.centurylinklabs.watchtower.enable=false`
+      - WATCHTOWER_LABEL_ENABLE=false
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_LOG_LEVEL=info
+      - TZ=$TZ
+      - WATCHTOWER_SCHEDULE=22 22 * * * # at 22:22 every day
+      - WATCHTOWER_NOTIFICATIONS=shoutrrr
+      - WATCHTOWER_NOTIFICATION_TITLE_TAG=$HOSTNAME
+      - WATCHTOWER_NOTIFICATION_URL=$PUSHOVER_URL
+
+  ######################################## Homepage
+
+  homer:
+    <<: *common-keys-apps
+    container_name: homer
+    image: b4bz/homer:latest
+    restart: unless-stopped
+    #build: .
+    volumes:
+      - $CONFIGDIR/homer/assets/:/www/assets
+    # ports:
+    #   - 8080:8080
+    environment:
+      - TZ=$TZ
+      - INIT_ASSETS=1 # default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homer-rtr.entrypoints=websecure"
+      - "traefik.http.routers.homer-rtr.rule=Host(`home.$DOMAINNAME`)"
+      - "traefik.http.routers.homer-rtr.middlewares=chain-no-auth@file"
+      - "traefik.http.routers.homer-rtr.service=homer-svc"
+      - "traefik.http.services.homer-svc.loadbalancer.server.port=8080"
+

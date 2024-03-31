@@ -1,0 +1,31 @@
+HISTCONTROL=erasedups:ignorespace
+
+################ PATHs ################
+export PATH=$PATH:$HOME/.local/bin/
+
+## Cargo
+export PATH="$HOME/.cargo/bin:$PATH"
+
+# export MANPATH="/usr/local/man:$MANPATH"
+export LC_ALL=en_US.UTF-8
+export LANG=en_US.UTF-8
+export LANGUAGE=en_US.UTF-8
+export LC_CTYPE=en_US.UTF-8
+
+################ ANTIGEN ################
+source ~/.antigen/antigen.zsh
+antigen use oh-my-zsh
+antigen bundle colored-man-pages
+antigen bundle git
+antigen bundle zsh-256color
+
+## Themes
+antigen theme gentoo
+antigen apply
+
+################ Aliases ################
+alias dc="docker compose"
+alias fd="fdfind"
+alias ls="lsd"
+alias l="lsd -la"
+alias cat="batcat -p"

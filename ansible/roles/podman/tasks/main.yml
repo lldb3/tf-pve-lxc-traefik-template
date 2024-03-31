@@ -1,0 +1,35 @@
+- name: Install podman
+  apt:
+    pkg:
+      - podman
+      - podman-compose
+      - podman-docker
+    update_cache: true
+
+
+- name: Copy overlayzfsmount
+  ansible.builtin.copy:
+    content: |
+      #!/bin/sh
+      exec /bin/mount -t overlay overlay "$@"
+    dest: /usr/local/bin/overlayzfsmount
+    owner: root
+    group: root
+    mode: '0744'
+
+- name: Setup Podman storage config
+  ansible.builtin.copy:
+    content: |
+      [storage]
+      driver = "overlay"
+      runroot = "/run/containers/storage"
+      graphroot = "/var/lib/containers/storage"
+      
+      [storage.options]
+      mount_program = "/usr/local/bin/overlayzfsmount"
+    dest: /etc/containers/storage.conf
+
+
+#- name: Unconditionally reboot the machine with all defaults
+#  ansible.builtin.reboot:
+#    reboot_command: /usr/sbin/reboot

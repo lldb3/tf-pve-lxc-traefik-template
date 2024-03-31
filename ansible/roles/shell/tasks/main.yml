@@ -1,0 +1,48 @@
+- name: Install required packages
+  apt:
+    update_cache: true
+    pkg:
+      - zsh
+      - curl
+      - wget
+      - git
+      - gcc
+      - bat
+      - net-tools
+      - fd-find
+      - htop
+      - neovim
+    state: present
+
+- name: debug $HOME
+  debug: var=ansible_env.HOME
+
+- name: Set login shell of user {{ ansible_env.USER }} to `/bin/zsh` with `usermod`
+  ansible.builtin.command: usermod --shell /bin/zsh {{ ansible_env.USER }}
+  become: true
+  changed_when: false
+
+
+- name: Clone single antigen branch
+  ansible.builtin.git:
+    repo: https://github.com/zsh-users/antigen.git
+    dest: "{{ ansible_env.HOME }}/.antigen"
+    single_branch: yes
+    version: master
+
+- name: copy .zshrc to host
+  ansible.builtin.template:
+    src: zshrc.j2
+    dest: "{{ ansible_env.HOME }}/.zshrc"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: 0600
+
+- name: install rust with rustup.sh
+  shell: |
+    curl --proto '=https' --tlsv1.3 https://sh.rustup.rs -sSf | sh -s -- -y
+
+- name: install lsd
+  shell: cargo install lsd
+
+

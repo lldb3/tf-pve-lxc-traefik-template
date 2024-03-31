@@ -1,0 +1,14 @@
+---
+
+trackstack_dir: "/opt/trackstack"
+trackstack_dir_owner: "{{ trackstack_storage_dir_owner }}"
+trackstack_dir_group: "{{ trackstack_storage_dir_group }}"
+
+# The following facts can also be defined:
+#
+# * `trackstack_timezone` - Arr stack service timezone (e.g. `Etc/UTC`).
+#   Default: Use target host timezone.
+trackstack_timezone: Europe/Paris
+
+# dns challenge, defaults to testing 'staging' repo to avoid rate-limit
+staging: true
