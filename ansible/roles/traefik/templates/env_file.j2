@@ -1,17 +1,15 @@
 ### Data
-DATADIR="{{ arrstack_env_dir }}/data"
-CONFIGDIR="{{ arrstack_env_dir }}/config"
-STORAGEDIR="{{ arrstack_storage_dir }}"
+DATADIR="{{ trackstack_dir }}/data"
+CONFIGDIR="{{ trackstack_dir }}/config"
+STORAGEDIR="{{ trackstack_dir }}"
 
-TZ="{{ arrstack_timezone }}"
-PUID="{{ arrstack_volume_dir_owner }}"
-PGID="{{ arrstack_volume_dir_group }}"
+TZ="{{ trackstack_timezone }}"
+PUID="{{ trackstack_dir_owner }}"
+PGID="{{ trackstack_dir_group }}"
 
-# higher than 52000
-PEERPORT=55000
 DOMAINNAME={{ traefik_domain_name }}
 CERT_POSTMASTER_MAIL={{  cert_postmaster_name }}
 
 # watchtower
 PUSHOVER_URL="{{ pushover_url }}"
-HOSTNAME=lanbuntu
+HOSTNAME=labrat

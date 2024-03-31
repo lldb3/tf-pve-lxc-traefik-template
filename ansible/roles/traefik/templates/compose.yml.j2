@@ -81,7 +81,7 @@ services:
       - --entryPoints.web.address=:80
       - --entryPoints.websecure.address=:443
       - --api=true
-      - --api.dashboard=false
+      - --api.dashboard=true
       - --log=true
       - --log.level=WARN
       - --accessLog=true
@@ -154,47 +154,23 @@ services:
       - "traefik.http.routers.traefik.middlewares=chain-no-auth@file"
       - "traefik.http.routers.traefik.service=api@internal"
 
-  watchtower:
-    image: containrrr/watchtower
-    container_name: watchtower
-    # command: --run-once # will run once and stop
-    restart: always
-    security_opt:
-      - no-new-privileges:true
-    networks:
-      socket_proxy:
-    environment:
-      - DOCKER_HOST=tcp://socket-proxy:2375
-      ## ignore updating containers only with `com.centurylinklabs.watchtower.enable=false`
-      - WATCHTOWER_LABEL_ENABLE=false
-      - WATCHTOWER_CLEANUP=true
-      - WATCHTOWER_LOG_LEVEL=info
-      - TZ=$TZ
-      - WATCHTOWER_SCHEDULE=22 22 * * * # at 22:22 every day
-      - WATCHTOWER_NOTIFICATIONS=shoutrrr
-      - WATCHTOWER_NOTIFICATION_TITLE_TAG=$HOSTNAME
-      - WATCHTOWER_NOTIFICATION_URL=$PUSHOVER_URL
-
-  ######################################## Homepage
-
-  homer:
-    <<: *common-keys-apps
-    container_name: homer
-    image: b4bz/homer:latest
-    restart: unless-stopped
-    #build: .
-    volumes:
-      - $CONFIGDIR/homer/assets/:/www/assets
-    # ports:
-    #   - 8080:8080
-    environment:
-      - TZ=$TZ
-      - INIT_ASSETS=1 # default
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.homer-rtr.entrypoints=websecure"
-      - "traefik.http.routers.homer-rtr.rule=Host(`home.$DOMAINNAME`)"
-      - "traefik.http.routers.homer-rtr.middlewares=chain-no-auth@file"
-      - "traefik.http.routers.homer-rtr.service=homer-svc"
-      - "traefik.http.services.homer-svc.loadbalancer.server.port=8080"
-
+{#  watchtower:#}
+{#    image: containrrr/watchtower#}
+{#    container_name: watchtower#}
+{#    # command: --run-once # will run once and stop#}
+{#    restart: always#}
+{#    security_opt:#}
+{#      - no-new-privileges:true#}
+{#    networks:#}
+{#      socket_proxy:#}
+{#    environment:#}
+{#      - DOCKER_HOST=tcp://socket-proxy:2375#}
+{#      ## ignore updating containers only with `com.centurylinklabs.watchtower.enable=false`#}
+{#      - WATCHTOWER_LABEL_ENABLE=false#}
+{#      - WATCHTOWER_CLEANUP=true#}
+{#      - WATCHTOWER_LOG_LEVEL=info#}
+{#      - TZ=$TZ#}
+{#      - WATCHTOWER_SCHEDULE=22 22 * * * # at 22:22 every day#}
+{#      - WATCHTOWER_NOTIFICATIONS=shoutrrr#}
+{#      - WATCHTOWER_NOTIFICATION_TITLE_TAG=$HOSTNAME#}
+{#      - WATCHTOWER_NOTIFICATION_URL=$PUSHOVER_URL#}

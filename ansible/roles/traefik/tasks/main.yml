@@ -4,6 +4,7 @@
     msg: "trackstack_dir: {{ trackstack_dir }}"
 
 
+
 - name: Create track stack environment directory
   ansible.builtin.file:
     state: directory
@@ -12,14 +13,8 @@
     group: "{{ trackstack_dir_group }}"
     mode: 0700
 
-- name: Create Arr stack storage directory
-  ansible.builtin.file:
-    state: directory
-    path: "{{ arrstack_storage_dir }}"
-    mode: 0770
-  when: trackstack_dir_create
 
-- name: Create Arr stack storage subdirectories
+- name: Create stack storage subdirectories
   ansible.builtin.file:
     state: directory
     path: "{{ trackstack_dir }}/{{ item }}"
@@ -27,15 +22,12 @@
   loop:
     - data
     - config
-  when: trackstack_dir_create
 
-- name: Create Arr stack config subdirectories
+- name: Create stack config subdirectories
   ansible.builtin.file:
     state: directory
-    path: "{{ arrstack_env_dir }}/{{ item }}"
+    path: "{{ trackstack_dir }}/{{ item }}"
     mode: 0770
-    owner: "{{ arrstack_volume_dir_owner }}"
-    group: "{{ arrstack_volume_dir_group }}"
   loop:
     - config
     - config/traefik2
@@ -48,7 +40,7 @@
   ansible.builtin.copy:
 #    todo: use ansible vault
     content: "{{ dns_challenge_api_token }}"
-    dest: "{{ arrstack_env_dir }}/secrets/cloudflare_api_token"
+    dest: "{{ trackstack_dir }}/secrets/cloudflare_api_token"
     owner: root
     group: root
     mode: 0600
@@ -56,16 +48,16 @@
 - name: copy traefik files to remote
   copy:
     src: "{{ role_path }}/files/traefik2/"
-    dest: "{{ arrstack_env_dir }}/config/traefik2/"
-    owner: "{{ arrstack_volume_dir_owner }}"
-    group: "{{ arrstack_volume_dir_group }}"
+    dest: "{{ trackstack_dir }}/config/traefik2/"
+    owner: "{{ trackstack_dir_owner }}"
+    group: "{{ trackstack_dir_group }}"
     mode: 0600
 
 
 - name: Create empty acme.json
   ansible.builtin.copy:
     content: ""
-    dest: "{{ arrstack_env_dir }}/config/traefik2/acme/acme.json"
+    dest: "{{ trackstack_dir }}/config/traefik2/acme/acme.json"
     owner: root
     group: root
     mode: 0600
@@ -74,65 +66,42 @@
 - name: create traefik.log
   ansible.builtin.copy:
     content: ""
-    dest: "{{ arrstack_env_dir }}/config/traefik2/traefik.log"
-    owner: "{{ arrstack_volume_dir_owner }}"
-    group: "{{ arrstack_volume_dir_group }}"
+    dest: "{{ trackstack_dir }}/config/traefik2/traefik.log"
+    owner: "{{ trackstack_dir_owner }}"
+    group: "{{ trackstack_dir_group }}"
     mode: 0644
 
 - name: create docker compose .env
   ansible.builtin.template:
     src: env_file.j2
-    dest: "{{ arrstack_env_dir }}/.env"
-    owner: "{{ arrstack_volume_dir_owner }}"
-    group: "{{ arrstack_volume_dir_group }}"
+    dest: "{{ trackstack_dir }}/.env"
+    owner: "{{ trackstack_dir_owner }}"
+    group: "{{ trackstack_dir_group }}"
     mode: 0600
 
 - name: create .socketproxy.env
   ansible.builtin.template:
     src: .socketproxy.env
-    dest: "{{ arrstack_env_dir }}/.socketproxy.env"
-    owner: "{{ arrstack_volume_dir_owner }}"
-    group: "{{ arrstack_volume_dir_group }}"
+    dest: "{{ trackstack_dir }}/.socketproxy.env"
+    owner: "{{ trackstack_dir_owner }}"
+    group: "{{ trackstack_dir_group }}"
     mode: 0600
 
 - name: create compose.yml file
   ansible.builtin.template:
     src: compose.yml.j2
-    dest: "{{ arrstack_env_dir }}/compose.yml"
-    owner: "{{ arrstack_volume_dir_owner }}"
-    group: "{{ arrstack_volume_dir_group }}"
+    dest: "{{ trackstack_dir }}/compose.yml"
+    owner: "{{ trackstack_dir_owner }}"
+    group: "{{ trackstack_dir_group }}"
     mode: 0600
 
-- name: start all Docker Compose services except for Buildarr
+
+- name: Create and start services
   community.docker.docker_compose_v2:
-    project_name: arrstack
-    project_src: "{{ arrstack_env_dir }}"
+    project_src: "{{ trackstack_dir }}"
     pull: missing
-    services:
-      - socket-proxy
-      - traefik
+  register: output
 
-- name: Wait for all services to be accessible
-  ansible.builtin.uri:
-    url: "{{ item }}"
-    status_code:
-      - 200
-      - 302
-  register: "arrstack_service_test"
-  until: "arrstack_service_test is not failed"
-  retries: 300
-  delay: 1
-  loop:
-    - "http://localhost:9091"
-
-
-- name: Restart all Docker Compose services
-  community.docker.docker_compose_v2:
-    project_name: trackstack
-    project_src: /opt/trackstack
-    state: restarted
-
-- name: Start the rest of the Docker Compose services
-  community.docker.docker_compose_v2:
-    project_name: trackstack
-    project_src: /opt/trackstack
+- name: Show results
+  ansible.builtin.debug:
+    var: output

@@ -15,3 +15,5 @@
       tags: shell
     - role: docker
       tags: docker
+    - role: traefik
+      tags: traefik

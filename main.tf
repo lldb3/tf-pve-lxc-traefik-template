@@ -48,6 +48,10 @@ resource "proxmox_virtual_environment_container" "lxc_container" {
 
   initialization {
     hostname = var.ct_config.hostname
+    dns {
+      servers = var.ct_network.dns
+    }
+
     ip_config {
       ipv4 {
         address = join("/", [cidrhost(var.ct_network.network, var.ct_config.hostnum), var.ct_network.net_mask])
@@ -64,6 +68,7 @@ resource "proxmox_virtual_environment_container" "lxc_container" {
     bridge      = var.ct_config.bridge
     rate_limit  = var.ct_config.nic_rate_limit
     mac_address = var.ct_config.mac_addr
+    vlan_id = var.ct_config.vlan
   }
   features {
     nesting = true
@@ -80,9 +85,14 @@ resource "local_file" "ansible_inventory" {
     [lxc_container]
     lxc_ct_01 ansible_host=${cidrhost(var.ct_network.network, var.ct_config.hostnum)}
 
-#    [all:vars]
-#    mediaserver_lxc_id=${var.ct_config.id}
-#    mediaserver_lxc_ip=${cidrhost(var.ct_network.network, var.ct_config.hostnum)}
+    [all:vars]
+    traefik_domain_name=${var.stack_config.domain_name}
+    dns_challenge_api_token=${var.stack_config.dns_api_key}
+    cert_postmaster_name=${var.stack_config.cert_postmaster_name}
+    pushover_url=${var.stack_config.pushover_url}
+    staging=${var.stack_config.staging}
+    mediaserver_lxc_id=${var.ct_config.id}
+    mediaserver_lxc_ip=${cidrhost(var.ct_network.network, var.ct_config.hostnum)}
 EOT
 }
 

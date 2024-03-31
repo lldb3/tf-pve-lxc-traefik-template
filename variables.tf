@@ -47,6 +47,7 @@ variable "ct_network" {
     network  = string
     gateway  = string
     net_mask = number
+    dns = list(string)
   })
 }
 

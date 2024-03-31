@@ -1,8 +1,8 @@
 ---
 
 trackstack_dir: "/opt/trackstack"
-trackstack_dir_owner: "{{ trackstack_storage_dir_owner }}"
-trackstack_dir_group: "{{ trackstack_storage_dir_group }}"
+trackstack_dir_owner: "root"
+trackstack_dir_group: "root"
 
 # The following facts can also be defined:
 #
