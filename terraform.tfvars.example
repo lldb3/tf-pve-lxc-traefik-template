@@ -1,0 +1,41 @@
+stack_config = {
+  domain_name          = "DOMAINNAME"
+  dns_api_key          = "CF_API_KEY"
+  cert_postmaster_name = "letsencrypt@example.com"
+  staging              = false
+  hostname = "labrat"
+  pushover_url         = "PUSHOVERURL"
+}
+
+pve_node_name = "node"
+pve_token     = "TOKEN"
+pve_endpoint  = "https://node:8006/"
+pve_ip        = "192.168.111.11"
+
+ct_tags                        = ["linux", "lab"]
+ct_datastore_storage_location  = "local-lvm"
+ct_datastore_template_location = "local"
+ct_source_file_path            = "http://download.proxmox.com/images/system/debian-12-standard_12.2-1_amd64.tar.zst"
+os_type                        = "debian"
+tmp_dir                        = "/var/tmp"
+
+ct_network = {
+  network  = "192.168.12.0/24"
+  gateway  = "192.168.12.1"
+  dns = ["192.168.12.1",]
+  net_mask = 24
+}
+
+ct_config = {
+  id             = 5003
+  hostname       = "ct-labrat"
+  cpus           = 4
+  memory         = 6144
+  disk_size      = 40
+  bridge         = "vmbr0"
+  hostnum        = 44
+  mac_addr       = "de:ad:be:ef:01"
+  vlan           = None
+  nic_rate_limit = 300
+}
+

@@ -10,6 +10,7 @@ variable "stack_config" {
     dns_api_key: string
     cert_postmaster_name: string
     pushover_url: string
+    hostname: string
     staging: bool
   })
 }
