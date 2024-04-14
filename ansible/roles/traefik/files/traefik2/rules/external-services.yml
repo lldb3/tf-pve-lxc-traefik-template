@@ -1,0 +1,15 @@
+#http:
+#  routers:
+#    test-rtr:
+#      rule: "Host(`changeme`)"
+#      entryPoints:
+#        - websecure
+#      middlewares:
+#        - chain-no-auth
+#      service: test-svc
+#
+#  services:
+#    test-svc:
+#      loadBalancer:
+#        servers:
+#          - url: "http://changeme"
